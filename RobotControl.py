@@ -1,16 +1,19 @@
 from __future__ import print_function
+import sys
 import time
 import xbox
 import USART
 import readchar
 import select
+import termios
+import tty
 
 
 def main():
     # Instantiate the controller and the quadmotor driver
     joy = xbox.Joystick()
     #time.sleep(1)
-    QM = USART.Quadmotor()
+    QM = USART.Quadmotor(port="/dev/ttyCH341USB0", baudrate=115200, timeout=1)
     input = ""
     active = "n"
     #timeout = 5

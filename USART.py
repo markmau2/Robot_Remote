@@ -3,11 +3,14 @@ import time
 
 
 class Quadmotor:
-    def __init__(self):
+    def __init__(self, port="/dev/ttyUSB0", baudrate=115200, timeout=1):
         self.UPLOAD_DATA = 3
         self.MOTOR_TYPE = 1
         self.recv_buffer = ""
         self.ser = None
+        self.port = port
+        self.baudrate=baudrate
+        self.timeout=timeout
         self.connectserial()
         self.t = 400 #speed mm/s
         #print("speed:", t)
@@ -17,20 +20,21 @@ class Quadmotor:
         self.set_motor_parameter()
         time.sleep(0.1)
 
-    def connectserial(self, port="/dev/ttyUSB0", baudrate=115200, timeout=1):
+    def connectserial(self):
         try:
             self.ser = serial.Serial(
-                port=port,
-                baudrate=baudrate,
+                port=self.port,
+                baudrate=self.baudrate,
                 parity=serial.PARITY_NONE,
                 stopbits=serial.STOPBITS_ONE,
                 bytesize=serial.EIGHTBITS,
-                timeout=timeout
+                timeout=self.timeout
             )
         except Exception as e:
-            print(f"Warning: failed to open serial port {port}: {e}")
+            print(f"Warning: failed to open serial port {self.port}: {e}")
             self.ser = None
-        
+            
+
     def CloseSerial(self):
          self.control_pwm(0, 0, 0, 0)
          self.ser.close()
