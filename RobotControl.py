@@ -9,62 +9,85 @@ import termios
 import tty
 
 
+# Keyboard keys -> robot direction
+KEY_MAP = {
+    "u": "Front",
+    "m": "Back",
+    "h": "Left",
+    "k": "Right",
+    "y": "TurnLeft",
+    "i": "TurnRight",
+}
+
+
 def main():
-    # Instantiate the controller and the quadmotor driver
-    joy = xbox.Joystick()
-    #time.sleep(1)
+    # Instantiate the quadmotor driver
     QM = USART.Quadmotor(port="/dev/ttyCH341USB0", baudrate=115200, timeout=1)
-    input = ""
+    joy = None
     active = "n"
-    #timeout = 5
     try:
-         # Show various axis and button states until Back button is pressed
          print("Do you want to use keywork input: y/n?")
-         input = key_input()
-         print("Xbox controller: Press Right Trigger button to exit")
-         if input == "y":
+         if key_input() == "y":
               active = "y"
-              input = ""
-         while not joy.rightTrigger():
-             #time.sleep(0.2)
-             # Show connection status
-             show("Connected:")
-             showIf(joy.connected(), "Y", "N")
-             # Dpad U/D/L/R
-             show("  Dpad:")
-             showIf(joy.dpadUp(), "Front")
-             showIf(joy.dpadDown(), "Back")
-             showIf(joy.dpadLeft(), "Left")
-             showIf(joy.dpadRight(), "Right")
-             showIf(joy.Y(), "TurnLeft")
-             showIf(joy.A(), "TurnRight")
-             # Move cursor back to start of line
-             show(chr(13)) 
+         # Instantiate the controller; in keyboard mode it is optional
+         try:
+              joy = xbox.Joystick()
+         except IOError as e:
+              if active != "y":
+                   raise
+              print(f"Warning: {e} - continuing with keyboard only")
+         if joy is not None:
+              print("Xbox controller: Press Right Trigger button to exit")
+         if active == "y":
+              print("Keyboard: u/m/h/k/y/i to move, q to exit")
+         while True:
+             if joy is not None:
+                 try:
+                     if joy.rightTrigger():
+                         break
+                     # Show connection status
+                     show("Connected:")
+                     showIf(joy.connected(), "Y", "N")
+                     # Dpad U/D/L/R
+                     show("  Dpad:")
+                     showIf(joy.dpadUp(), "Front")
+                     showIf(joy.dpadDown(), "Back")
+                     showIf(joy.dpadLeft(), "Left")
+                     showIf(joy.dpadRight(), "Right")
+                     showIf(joy.Y(), "TurnLeft")
+                     showIf(joy.A(), "TurnRight")
+                     # Move cursor back to start of line
+                     show(chr(13))
+
+                     if joy.dpadUp(): QM.run("Front")
+                     if joy.dpadDown(): QM.run("Back")
+                     if joy.dpadLeft(): QM.run("Left")
+                     if joy.dpadRight(): QM.run("Right")
+                     if joy.Y(): QM.run("TurnLeft")
+                     if joy.A(): QM.run("TurnRight")
+                 except IOError as e:
+                     # Controller unplugged: keep going if keyboard mode is on
+                     if active != "y":
+                         raise
+                     print(f"\nWarning: {e} - continuing with keyboard only")
+                     joy.close()
+                     joy = None
 
              if active == "y":
-                 input = key_input()
-             
-             if  input == "u": QM.run("Front")
-             if  input == "m": QM.run("Back")
-             if  input == "h": QM.run("Left")
-             if  input == "k": QM.run("Right")
-             if  input == "y": QM.run("TurnLeft")
-             if  input == "i": QM.run("TurnRight")
-             if joy.dpadUp(): QM.run("Front")
-             if joy.dpadDown(): QM.run("Back")
-             if joy.dpadLeft(): QM.run("Left")
-             if joy.dpadRight(): QM.run("Right")
-             if joy.Y(): QM.run("TurnLeft")
-             if joy.A(): QM.run("TurnRight")
-                           
+                 key = key_input()
+                 if key == "q":
+                     break
+                 if key in KEY_MAP:
+                     QM.run(KEY_MAP[key])
 
     except Exception as e:
             print(f"Warning: failed: {e}")
-    finally:       
+    finally:
             # Close serial out when done
             QM.CloseSerial()
             # Close joy out when done
-            joy.close()
+            if joy is not None:
+                joy.close()
 
 def key_input():
         key = readchar.readkey()
